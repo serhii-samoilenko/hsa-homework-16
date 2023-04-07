@@ -17,7 +17,7 @@ import kotlin.time.Duration.Companion.seconds
 fun runDemo() {
     val r = Report("REPORT.md")
     r.h1("Logs demo report")
-    val concurrency = 25
+    val concurrency = 10
     val db = Database(ConnectionPool("jdbc:mysql://localhost:3306/test", "root", "root", concurrency))
     r.text("Creating table and inserting data")
     db.execute(
@@ -31,7 +31,7 @@ fun runDemo() {
         """.trimIndent(),
         report = r,
     )
-    val desiredCount = 100_000L
+    val desiredCount = 100000L
 
     var count = db.querySingleValue("SELECT COUNT(*) FROM data") as Long
     if (count != desiredCount) {
@@ -49,7 +49,7 @@ fun runDemo() {
                 (SELECT @row_number := @row_number + 1 AS num FROM information_schema.tables) t1,
                 (SELECT @row_number := @row_number + 1 AS num FROM information_schema.tables) t2,
                 (SELECT @row_number := @row_number + 1 AS num FROM information_schema.tables) t3
-            LIMIT $desiredCount;
+            LIMIT $desiredCount
             """.trimIndent(),
             report = r,
         )
@@ -58,9 +58,12 @@ fun runDemo() {
     r.text("Table contains $count rows")
 
     val queries = listOf(
-        "SELECT col1 FROM data WHERE col1 = 'col1_1'",
-        "SELECT col1 FROM data WHERE col2 = 'col2_2'",
-        "SELECT col1 FROM data WHERE col3 = 'col3_3'",
+//        "SELECT col1 FROM data WHERE col1 = 'col1_1'",
+//        "SELECT col1 FROM data WHERE col2 = 'col2_2'",
+        "SELECT count(*) FROM data t1 JOIN data t2 ON t1.id = t2.id - 1 WHERE t1.col1 LIKE '%col1_' || ROUND(RAND() * 100) || '%' " +
+            "AND t2.col2 LIKE '%col2_' || ROUND(RAND() * 100) || '%'",
+        "SELECT col1 FROM data WHERE col3 = 'col3_' || ROUND(RAND() * 100)",
+        "SELECT col1 FROM data WHERE id = ROUND(RAND() * 10000)",
     )
 
     val duration = 30.seconds

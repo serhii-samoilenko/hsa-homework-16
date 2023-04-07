@@ -11,14 +11,31 @@ CREATE TABLE IF NOT EXISTS data (
 );
 ```
 
+Expected 100000 rows, got 10000
+
+```sql
+TRUNCATE TABLE data;
+SET @row_number = 0;
+INSERT INTO data (col1, col2, col3)
+SELECT
+    CONCAT('col1_', t1.num),
+    CONCAT('col2_', t2.num),
+    CONCAT('col3_', t3.num)
+FROM
+    (SELECT @row_number := @row_number + 1 AS num FROM information_schema.tables) t1,
+    (SELECT @row_number := @row_number + 1 AS num FROM information_schema.tables) t2,
+    (SELECT @row_number := @row_number + 1 AS num FROM information_schema.tables) t3
+LIMIT 100000;
+```
+
 Table contains 100000 rows
 
 Will use random queries of:
 
 ```sql
-SELECT col1 FROM data WHERE col1 = 'col1_1';
-SELECT col1 FROM data WHERE col2 = 'col2_2';
-SELECT col1 FROM data WHERE col3 = 'col3_3';
+SELECT count(*) FROM data t1 JOIN data t2 ON t1.id = t2.id - 1 WHERE t1.col1 LIKE '%col1_' || ROUND(RAND() * 100) || '%' AND t2.col2 LIKE '%col2_' || ROUND(RAND() * 100) || '%';
+SELECT col1 FROM data WHERE col3 = 'col3_' || ROUND(RAND() * 100);
+SELECT col1 FROM data WHERE id = ROUND(RAND() * 10000);
 ```
 
 Will run queries for 30s
@@ -29,11 +46,11 @@ Will run queries for 30s
 SET GLOBAL long_query_time = 10;
 ```
 
-Run `1`, result: `1571 ops in 30.137s - 52.1 ops/sec`
+Run `1`, result: `466 ops in 30.505s - 15.3 ops/sec`
 
-Run `2`, result: `1550 ops in 30.225s - 51.3 ops/sec`
+Run `2`, result: `470 ops in 30.295s - 15.5 ops/sec`
 
-Run `3`, result: `1644 ops in 30.162s - 54.5 ops/sec`
+Run `3`, result: `465 ops in 30.469s - 15.3 ops/sec`
 
 ### Running queries with 1-second slow query log threshold
 
@@ -41,11 +58,11 @@ Run `3`, result: `1644 ops in 30.162s - 54.5 ops/sec`
 SET GLOBAL long_query_time = 1;
 ```
 
-Run `1`, result: `1330 ops in 30.263s - 43.9 ops/sec`
+Run `1`, result: `472 ops in 30.384s - 15.5 ops/sec`
 
-Run `2`, result: `1222 ops in 30.211s - 40.4 ops/sec`
+Run `2`, result: `473 ops in 30.506s - 15.5 ops/sec`
 
-Run `3`, result: `1431 ops in 30.178s - 47.4 ops/sec`
+Run `3`, result: `454 ops in 30.391s - 14.9 ops/sec`
 
 ### Running queries with 0-second slow query log threshold
 
@@ -53,9 +70,9 @@ Run `3`, result: `1431 ops in 30.178s - 47.4 ops/sec`
 SET GLOBAL long_query_time = 0;
 ```
 
-Run `1`, result: `362 ops in 40.057s - 9.04 ops/sec`
+Run `1`, result: `420 ops in 30.342s - 13.8 ops/sec`
 
-Run `2`, result: `24 ops in 30.037s - 0.799 ops/sec`
+Run `2`, result: `443 ops in 30.326s - 14.6 ops/sec`
 
-Run `3`, result: `24 ops in 30.004s - 0.8 ops/sec`
+Run `3`, result: `428 ops in 30.318s - 14.1 ops/sec`
 
