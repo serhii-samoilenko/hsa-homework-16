@@ -31,7 +31,7 @@ fun runDemo() {
         """.trimIndent(),
         report = r,
     )
-    val desiredCount = 50000L
+    val desiredCount = 100_000L
 
     var count = db.querySingleValue("SELECT COUNT(*) FROM data") as Long
     if (count != desiredCount) {
@@ -57,27 +57,24 @@ fun runDemo() {
     count = db.querySingleValue("SELECT COUNT(*) FROM data") as Long
     r.text("Table contains $count rows")
 
-    val query =
-        """
-        SELECT count(*)
-        FROM data t1
-        JOIN data t2 ON t1.id = t2.id - 1
-        JOIN data t3 ON t1.id = t3.id - 2
-        WHERE t1.col1 LIKE '%col1_%' AND t2.col2 LIKE '%col2_%' AND t3.col3 LIKE '%col3_%'
-        """.trimIndent()
+    val queries = listOf(
+        "SELECT col1 FROM data WHERE col1 = 'col1_1'",
+        "SELECT col1 FROM data WHERE col2 = 'col2_2'",
+        "SELECT col1 FROM data WHERE col3 = 'col3_3'",
+    )
 
     val duration = 30.seconds
 
-    r.text("Will use query:")
-    r.sql(query)
+    r.text("Will use random queries of:")
+    r.sql(queries)
     r.text("Will run queries for $duration")
 
     fun runBenchmark(repeats: Int) {
         for (i in 1..repeats) {
             benchmark(duration, concurrency) {
-                Runnable { db.query(query) }
+                Runnable { db.query(queries.random()) }
             }.also {
-                r.text("Run `$i`, Result: `${it.opsPerSecond()}` queries per second")
+                r.text("Run `$i`, result: `$it`")
             }
         }
     }

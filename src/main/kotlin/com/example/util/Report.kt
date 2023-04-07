@@ -42,7 +42,7 @@ class Report(
     }
 
     fun sql(sql: List<String>) {
-        val block = "```sql\n${sql.joinToString(";\n")}\n```"
+        val block = "```sql\n${sql.joinToString(";\n")};\n```"
         text(block)
     }
 
