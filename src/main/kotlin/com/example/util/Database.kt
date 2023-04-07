@@ -1,13 +1,15 @@
 package com.example.util
 
-import java.sql.Connection
 import java.sql.ResultSet.CONCUR_READ_ONLY
 import java.sql.ResultSet.TYPE_FORWARD_ONLY
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 class Database(private val pool: ConnectionPool) {
-    fun execute(vararg sql: String): Duration {
+    fun execute(vararg sql: String, report: Report? = null): Duration = execute(sql.toList(), report)
+
+    fun execute(sql: List<String>, report: Report? = null): Duration {
+        report?.sql(sql.toList())
         val start = System.currentTimeMillis()
         pool.connection().use { connection ->
             sql.forEach {
@@ -18,8 +20,10 @@ class Database(private val pool: ConnectionPool) {
         return (end - start).milliseconds
     }
 
-    fun tryExecute(sql: String) = try {
-        execute(sql)
+//    fun execute(sql: String, r: Report? = null): Duration = execute(listOf(sql), r)
+
+    fun tryExecute(sql: String, report: Report? = null) = try {
+        execute(listOf(sql), report)
     } catch (e: Exception) {
         println("Ignoring exception: ${e.message}")
         null
@@ -53,7 +57,7 @@ class Database(private val pool: ConnectionPool) {
         }
     }
 
-    fun querySingleValue(connection: Connection, sql: String): Any = queryData(sql).first().values.first()
+    fun querySingleValue(sql: String): Any = queryData(sql).first().values.first()
 
-    fun queryRowValues(connection: Connection, sql: String): Collection<Any> = queryData(sql).map { it.values.first() }
+    fun queryRowValues(sql: String): Collection<Any> = queryData(sql).map { it.values.first() }
 }

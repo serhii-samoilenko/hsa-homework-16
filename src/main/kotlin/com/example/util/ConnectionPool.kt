@@ -6,9 +6,9 @@ import java.sql.Connection
 
 data class ConnectionPool(
     val jdbcUrl: String,
-    val username: String,
-    val password: String,
-    val poolSize: Int,
+    val username: String = "",
+    val password: String = "",
+    val poolSize: Int = 10,
 ) {
     private val ds: HikariDataSource
 

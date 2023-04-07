@@ -65,6 +65,7 @@ class Report(
 
     @Synchronized
     fun writeToFile() {
+        File(targetDir).mkdirs()
         val file = File(targetDir, fileName)
         file.writeText(data)
         println("Wrote report to ${file.absolutePath}")

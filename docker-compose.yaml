@@ -10,16 +10,21 @@ services:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_DATABASE=test
     volumes:
-      - ./config/mysql-0.cnf:/etc/mysql/conf.d/mysql.cnf:ro
+      - ./config/mysql.cnf:/etc/mysql/conf.d/mysql.cnf:ro
       - ./logs/mysql:/var/log/mysql
     ports:
       - '3306:3306'
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.6.2
     container_name: filebeat
     volumes:
-      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./config/filebeat.yaml:/usr/share/filebeat/filebeat.yml:ro
       - ./logs/mysql:/var/log/mysql:ro
     environment:
       - ELASTICSEARCH_HOSTS=elk:9200
@@ -27,14 +32,23 @@ services:
       - ELASTICSEARCH_USERNAME=
       - ELASTICSEARCH_PASSWORD=
     depends_on:
-      - mysql
-      - elk
+      mysql:
+        condition: service_healthy
+      elk:
+        condition: service_healthy
 
   elk:
     image: sebp/elk:8.6.2
     container_name: elk
+    environment:
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
       - "5601:5601"
       - "9200:9200"
       - "5044:5044"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9200" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
