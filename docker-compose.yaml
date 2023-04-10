@@ -20,11 +20,11 @@ services:
       timeout: 5s
       retries: 10
 
-  filebeat:
+  filebeat-elk:
     image: docker.elastic.co/beats/filebeat:8.6.2
-    container_name: filebeat
+    container_name: filebeat-elk
     volumes:
-      - ./config/filebeat.yaml:/usr/share/filebeat/filebeat.yml:ro
+      - ./config/filebeat-elk.yaml:/usr/share/filebeat/filebeat.yml:ro
       - ./logs/mysql:/var/log/mysql:ro
     environment:
       - ELASTICSEARCH_HOSTS=elk:9200
@@ -41,7 +41,10 @@ services:
     image: sebp/elk:8.6.2
     container_name: elk
     environment:
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - ES_JAVA_OPTS=-Xms1024m -Xmx1024m
+      - LOGSTASH_START=1
+      - KIBANA_START=1
+      - ELASTICSEARCH_START=1
     ports:
       - "5601:5601"
       - "9200:9200"
@@ -52,3 +55,60 @@ services:
       timeout: 5s
       retries: 10
 
+  filebeat-graylog:
+    image: docker.elastic.co/beats/filebeat:8.6.2
+    container_name: filebeat-graylog
+    volumes:
+      - ./config/filebeat-graylog.yaml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs/mysql:/var/log/mysql:ro
+    environment:
+      - GRAYLOG_HOSTS=graylog:5044
+    depends_on:
+      graylog:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+
+  mongo:
+    image: mongo:5.0.13
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
+    environment:
+      - http.host=0.0.0.0
+      - transport.host=localhost
+      - network.host=0.0.0.0
+      - "ES_JAVA_OPTS=-Dlog4j2.formatMsgNoLookups=true -Xms512m -Xmx512m"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9200" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  graylog:
+    image: graylog/graylog:5.0
+    restart: always
+    entrypoint: /usr/bin/tini -- wait-for-it elasticsearch:9200 --  /docker-entrypoint.sh
+    environment:
+      - GRAYLOG_PASSWORD_SECRET=qwerty1234567890
+      # Password: admin
+      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/
+      - GRAYLOG_MONGODB_URI=mongodb://mongo/graylog
+      - GRAYLOG_ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      # Graylog web interface and REST API
+      - 9000:9000
+      # Syslog TCP
+      - 1514:1514
+      # Syslog UDP
+      - 1514:1514/udp
+      # GELF TCP
+      - 12201:12201
+      # GELF UDP
+      - 12201:12201/udp
+    depends_on:
+      mongo:
+        condition: service_started
+      elasticsearch:
+        condition: service_started

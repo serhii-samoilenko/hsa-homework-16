@@ -58,8 +58,6 @@ fun runDemo() {
     r.text("Table contains $count rows")
 
     val queries = listOf(
-//        "SELECT col1 FROM data WHERE col1 = 'col1_1'",
-//        "SELECT col1 FROM data WHERE col2 = 'col2_2'",
         "SELECT count(*) FROM data t1 JOIN data t2 ON t1.id = t2.id - 1 WHERE t1.col1 LIKE '%col1_' || ROUND(RAND() * 100) || '%' " +
             "AND t2.col2 LIKE '%col2_' || ROUND(RAND() * 100) || '%'",
         "SELECT col1 FROM data WHERE col3 = 'col3_' || ROUND(RAND() * 100)",
